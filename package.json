@@ -1,0 +1,13 @@
+{
+  "name": "ruleta",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Ruleta de nombres con tienda, monedas, cuentas y regalos (Netlify Functions + Blobs)",
+  "dependencies": {
+    "@netlify/blobs": "^10.7.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
