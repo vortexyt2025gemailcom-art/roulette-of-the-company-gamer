@@ -746,12 +746,12 @@ document.body.insertAdjacentHTML('beforeend',`<button id="rb" aria-label="Músic
 <div class="r tabs" id="rT"><button class="sm on" data-t="b">Buscar</button><button class="sm" data-t="g">Guardados</button></div>
 <div class="r" id="rO" hidden><button class="sm" id="rS" style="flex:1">⬆️ Subir canción</button><button class="sm" id="rA" style="flex:1">📣 Subir anuncio</button></div>
 <div id="rV"><input class="in" id="rQ" placeholder="Buscar por nombre o ID" autocomplete="off"><div id="rL"></div></div>
-<div id="rU" hidden><div class="r"><button class="sm" id="uB">← Volver</button><b id="uT"></b></div>
+<div id="rU" hidden><div class="r"><button class="sm" id="rBack">← Volver</button><b id="uT"></b></div>
 <div class="r" id="uN"><input class="in" id="uNm" placeholder="Nombre" maxlength="40" autocomplete="off"><input class="in" id="uId" placeholder="ID" maxlength="12" autocomplete="off" style="max-width:36%"></div>
-<input class="in" id="uX" placeholder="Texto del anuncio (opcional)" maxlength="120" autocomplete="off">
+<input class="in" id="rAdText" placeholder="Texto del anuncio (opcional)" maxlength="120" autocomplete="off">
 <label class="in fl"><span id="uCl"></span><input type="file" id="uCf" accept="image/*,video/*" hidden></label>
 <label class="in fl" id="uAu"><span id="uAl"></span><input type="file" id="uAf" accept="audio/*,.opus,.ogg,.oga,.m4a,.mp3,.aac,.wav,.amr,.3gp" hidden></label>
-<div class="rb2" id="uP" hidden><i></i></div><button class="ok2" id="uGo">Subir</button><button class="sm" id="uDl" hidden>🗑️ Quitar anuncio actual</button></div></section>
+<div class="rb2" id="rProgress" hidden><i></i></div><button class="ok2" id="uGo">Subir</button><button class="sm" id="uDl" hidden>🗑️ Quitar anuncio actual</button></div></section>
 <div id="ad"><div class="adc"><button class="x" id="adX" aria-label="Cerrar">✕</button><div id="adM"></div><p id="adT"></p></div></div>`);
 const rd=$('#rd'),rb=$('#rb');let songs=[],tab='b',fav=[],au=null,pu=[],um='s',urls=[];
 try{fav=JSON.parse(localStorage.getItem('ruleta_fav'))||[]}catch{}
@@ -774,12 +774,12 @@ rb.onclick=async()=>{try{songs=await dx('s','readonly',s=>s.getAll())}catch{song
 $('#rX').onclick=close;
 /* subir (solo dueño) */
 async function form(m){um=m;view(1);const s=m=='s';
- $('#uT').textContent=s?'Subir canción':'Subir anuncio';$('#uN').hidden=$('#uAu').hidden=!s;$('#uX').hidden=s;
+ $('#uT').textContent=s?'Subir canción':'Subir anuncio';$('#uN').hidden=$('#uAu').hidden=!s;$('#rAdText').hidden=s;
  $('#uCl').textContent=s?'📷 Foto o video':'📷 Foto o video del anuncio';$('#uAl').textContent='🎵 Subir audio';
- ['#uNm','#uId','#uX','#uCf','#uAf'].forEach(k=>$(k).value='');
- $('#uP').hidden=true;$('#uGo').disabled=false;$('#uGo').textContent='Subir';$('#uDl').hidden=true;
+ ['#uNm','#uId','#rAdText','#uCf','#uAf'].forEach(k=>$(k).value='');
+ $('#rProgress').hidden=true;$('#uGo').disabled=false;$('#uGo').textContent='Subir';$('#uDl').hidden=true;
  if(!s){try{$('#uDl').hidden=!await dx('a','readonly',x=>x.get('ad'))}catch{}}}
-$('#rS').onclick=()=>form('s');$('#rA').onclick=()=>form('a');$('#uB').onclick=()=>{view(0);render()};
+$('#rS').onclick=()=>form('s');$('#rA').onclick=()=>form('a');$('#rBack').onclick=()=>{view(0);render()};
 $('#uCf').onchange=e=>{const f=e.target.files[0];if(f)$('#uCl').textContent='✅ '+f.name};
 $('#uAf').onchange=e=>{const f=e.target.files[0];if(f)$('#uAl').textContent='✅ '+f.name};
 $('#uDl').onclick=async()=>{try{await dx('a','readwrite',x=>x.delete('ad'));toast('Anuncio quitado');$('#uDl').hidden=true}catch{toast('No se pudo quitar')}};
@@ -789,12 +789,12 @@ $('#uGo').onclick=async()=>{
  const s=um=='s',cf=$('#uCf').files[0],af=$('#uAf').files[0],nm=$('#uNm').value.trim(),id=$('#uId').value.trim(),
   bad=!OWN?'Solo el dueño puede subir':!cf?'Elige la foto o el video':s&&!nm?'Escribe el nombre':s&&!id?'Escribe el ID':s&&!af?'Sube el audio':s&&songs.some(x=>N(x.id)==N(id))?'Ese ID ya existe':'';
  if(bad){const f=$('#rU');toast(bad);f.classList.remove('shk');void f.offsetWidth;f.classList.add('shk');return}
- const b=$('#uGo'),pr=$('#uP'),bar=pr.firstElementChild,t=(cf.size+(s?af.size:0))||1;let d=0;
+ const b=$('#uGo'),pr=$('#rProgress'),bar=pr.firstElementChild,t=(cf.size+(s?af.size:0))||1;let d=0;
  const pg=x=>{const v=Math.min(99,(d+x)/t*100)|0;bar.style.width=v+'%';b.textContent='Subiendo '+v+'%'};
  b.disabled=true;pr.hidden=false;bar.style.width='0';
  try{const img=await rf(cf,pg);d+=cf.size;
   if(s){const audio=await rf(af,pg,mt(af));await dx('s','readwrite',x=>x.put({id,name:nm,img,audio,ts:Date.now()}));songs.push({id,name:nm,img,audio})}
-  else await dx('a','readwrite',x=>x.put({img,tx:$('#uX').value.trim()},'ad'));
+  else await dx('a','readwrite',x=>x.put({img,tx:$('#rAdText').value.trim()},'ad'));
   bar.style.width='100%';b.textContent='Subido ✓';toast(s?'Canción subida con éxito':'Anuncio subido con éxito');
   setTimeout(()=>{if(s){view(0);render()}else{close();showAd()}},900)
  }catch{b.disabled=false;b.textContent='Subir';pr.hidden=true;toast('No se pudo subir. Revisa el espacio y prueba otra vez')}};
