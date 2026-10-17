@@ -630,17 +630,17 @@ function who(){$('#bU').textContent=acct?'👤 '+acct.n:'👤 Entrar';if(acct)st
 function gate(msg,mode){const o=$('#lkz');o&&o.remove();const reg=(mode||'u')==='u',L=document.createElement('div');L.id='lkz';
  L.innerHTML=`<button class="x" id="gX" style="position:absolute;top:14px;right:14px">✕</button><b style="font-size:22px">${reg?'Crea tu cuenta':'Iniciar sesión'}</b><div class="lb" style="text-align:center;max-width:320px">${msg||'Guarda tus monedas y skins en la nube y entra desde cualquier celular.'}</div>`
  +(reg?'<input class="in" id="rN" placeholder="Nombre real (privado)" maxlength="30" autocomplete="off">':'')
- +`<input class="in" id="rU" placeholder="${reg?'Nombre que verán todos en tu perfil':'Tu nombre de perfil'}" maxlength="16" autocomplete="${reg?'off':'username'}"><input class="in" id="rP" type="password" placeholder="Contraseña (mínimo 6)" autocomplete="${reg?'new':'current'}-password">`
- +(reg?'<input class="in" id="rQ" type="password" placeholder="Confirmar contraseña" autocomplete="new-password"><button class="sm" id="rF">🖼️ Foto de perfil (opcional)</button>':'')
- +`<div class="lb" id="rM"></div><button class="ok2" id="rK">${reg?'Crear cuenta':'Entrar'}</button><button class="sm" id="rS">${reg?'Ya tengo cuenta':'Crear cuenta nueva'}</button>`;
+ +`<input class="in" id="gU" placeholder="${reg?'Nombre que verán todos en tu perfil':'Tu nombre de perfil'}" maxlength="16" autocomplete="${reg?'off':'username'}"><input class="in" id="rP" type="password" placeholder="Contraseña (mínimo 6)" autocomplete="${reg?'new':'current'}-password">`
+ +(reg?'<input class="in" id="gQ" type="password" placeholder="Confirmar contraseña" autocomplete="new-password"><button class="sm" id="rF">🖼️ Foto de perfil (opcional)</button>':'')
+ +`<div class="lb" id="rM"></div><button class="ok2" id="rK">${reg?'Crear cuenta':'Entrar'}</button><button class="sm" id="gS">${reg?'Ya tengo cuenta':'Crear cuenta nueva'}</button>`;
  document.body.append(L);close();requestAnimationFrame(()=>L.classList.add('on'));
  const end=()=>{L.classList.remove('on');setTimeout(()=>L.remove(),500)};
- $('#gX').onclick=end;$('#rS').onclick=()=>gate(msg,reg?'i':'u');reg&&($('#rF').onclick=()=>$('#uF').click());
- $('#rK').onclick=async()=>{const M=$('#rM'),nm=$('#rU').value.trim(),p=$('#rP').value,r=reg?$('#rN').value.trim():'';
+ $('#gX').onclick=end;$('#gS').onclick=()=>gate(msg,reg?'i':'u');reg&&($('#rF').onclick=()=>$('#uF').click());
+ $('#rK').onclick=async()=>{const M=$('#rM'),nm=$('#gU').value.trim(),p=$('#rP').value,r=reg?$('#rN').value.trim():'';
   if(reg&&!r)return M.textContent='Pon tu nombre real';
   if(!/^\w{3,16}$/.test(nm))return M.textContent='Nombre de perfil: 3 a 16 letras, números o _';
   if(p.length<6)return M.textContent='La contraseña necesita 6 o más caracteres';
-  if(reg&&p!==$('#rQ').value)return M.textContent='Las contraseñas no coinciden';
+  if(reg&&p!==$('#gQ').value)return M.textContent='Las contraseñas no coinciden';
   $('#rK').disabled=true;M.textContent='Conectando…';
   try{const j=await api(reg?'reg':'login',reg?{n:nm,r,pw:p,p:UPH,d:pk()}:{n:nm,pw:p});
    acct={n:j.n,k:j.k,p:j.p||'',r:j.r||''};AS();adopt(j.d);who();end();toast('¡Hola, '+acct.n+'!')}
