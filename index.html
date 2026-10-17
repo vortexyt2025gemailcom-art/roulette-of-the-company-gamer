@@ -477,11 +477,12 @@ $('#pV').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
  $('#bgv').src=URL.createObjectURL(f);st.bg='v';save();apply();shop()};
 
 
-/* ===== datos solo de este dispositivo ===== */
+/* ===== ajustes y funciones compartidas ===== */
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const PKEY='ruleta_perfil';let prof=null,UPH='',AC,lk,lt2=0;try{prof=JSON.parse(localStorage.getItem(PKEY))}catch{}
-['ruleta_owner_token','ses'].forEach(k=>{try{localStorage.removeItem(k)}catch{}});['owner','used','an','id'].forEach(k=>delete st[k]);
-st.nick=prof?prof.n:(st.nick||'Jugador');st.sec=st.sec||0;st.spins=st.spins||0;
+let UPH='',AC,lk,lt2=0;
+const pic=(p,z)=>p?`<img src="${esc(p)}" width="${z}" height="${z}" style="border-radius:50%;object-fit:cover">`:`<span style="font-size:${z*.7}px">👤</span>`;
+const isIn=()=>true;
+st.nick=st.nick||'Jugador';st.sec=st.sec||0;st.spins=st.spins||0;
 st.hide=(st.hide||['cp','ck','bT','bt','bS','bM','bU','bE']).filter(id=>document.getElementById(id));
 /* skins, fondos y decoraciones nuevas */
 WS[9][2]='hw';WS[19][1]=6500;
@@ -557,36 +558,7 @@ function pay(n){const m=encodeURIComponent('Hola, quiero comprar '+fmtx(n)+' mon
  $('#tB').innerHTML=`<div class="lb">1️⃣ Haz la transferencia a esta cuenta</div><div class="in pay"><span>Banco</span><b>${BANCO.banco}</b></div><div class="in pay"><span>N.º de cuenta</span><b>${BANCO.cuenta}</b><button class="sm" id="pC">Copiar</button></div><div class="lb">2️⃣ Envía la captura del comprobante a este número</div><div class="in pay"><span>WhatsApp</span><b>${BANCO.tel}</b></div><div class="in warn">⚠️ <b>Es obligatorio enviar el comprobante.</b> Si no lo envías, las monedas no se acreditan.</div><a class="ok2" id="pW" target="_blank" rel="noopener" href="https://wa.me/${BANCO.wa}?text=${m}">📤 Enviar comprobante por WhatsApp</a>`;
  $('#pC').onclick=()=>{try{navigator.clipboard.writeText(BANCO.cuenta)}catch{}toast('Número de cuenta copiado')};open('#sQ')}
 
-/* ===== cuenta local obligatoria (se queda en este dispositivo) ===== */
-const PS=()=>{try{localStorage.setItem(PKEY,JSON.stringify(prof))}catch{}},
-hx=async t=>{try{return[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t)))].map(b=>b.toString(16).padStart(2,'0')).join('')}catch{return''+hs(t)}},
-pic=(p,z)=>p?`<img src="${esc(p)}" width="${z}" height="${z}" style="border-radius:50%;object-fit:cover">`:`<span style="font-size:${z*.7}px">👤</span>`,
-SES=v=>{try{v?localStorage.setItem('ruleta_ses','1'):localStorage.removeItem('ruleta_ses')}catch{}},
-isIn=()=>true;
-function who(){$('#bU').textContent='👤 '+st.nick;$('#sN').value=st.nick;$('#sN').disabled=true}
-function wipe(){try{localStorage.removeItem(PKEY);localStorage.removeItem(KEY);localStorage.removeItem('ruleta_ses')}catch{}location.reload()}
-function gate(){const o=$('#lkz');o&&o.remove();const up=!prof,L=document.createElement('div');L.id='lkz';
- L.innerHTML=up?`<b style="font-size:22px">Crea tu cuenta</b><div class="lb" style="text-align:center">Es obligatoria para usar la ruleta y se guarda solo en este dispositivo.</div><input class="in" id="rN" placeholder="Nombre real" maxlength="30" autocomplete="off"><input class="in" id="rU" placeholder="Nombre que aparecerá en tu perfil" maxlength="16" autocomplete="off"><input class="in" id="rP" type="password" placeholder="Contraseña (mínimo 6)" autocomplete="new-password"><input class="in" id="rQ" type="password" placeholder="Confirmar contraseña" autocomplete="new-password"><button class="sm" id="rF">🖼️ Foto de perfil (opcional)</button><div class="lb" id="rM"></div><button class="ok2" id="rK">Crear cuenta</button>`
- :`${pic(prof.p,84)}<b style="font-size:22px">${esc(prof.n)}</b><div class="lb">${esc(prof.r||'')}</div><input class="in" id="lP" type="password" placeholder="Contraseña" autocomplete="current-password"><div class="lb" id="lM"></div><button class="ok2" id="lG">Entrar</button><button class="sm" id="lR">Olvidé mi contraseña</button>`;
- document.body.append(L);close();requestAnimationFrame(()=>L.classList.add('on'));
- const done=()=>{SES(1);who();L.classList.remove('on');setTimeout(()=>L.remove(),500);toast('¡Hola, '+st.nick+'!')};
- if(up){$('#rF').onclick=()=>$('#uF').click();
-  $('#rK').onclick=async()=>{const r=$('#rN').value.trim(),nm=$('#rU').value.trim(),p=$('#rP').value,M=$('#rM');
-   if(!r)return M.textContent='Pon tu nombre real';
-   if(!/^\w{3,16}$/.test(nm))return M.textContent='Nombre de perfil: 3 a 16 letras, números o _';
-   if(p.length<6)return M.textContent='La contraseña necesita 6 o más caracteres';
-   if(p!==$('#rQ').value)return M.textContent='Las contraseñas no coinciden';
-   const sa=Math.random().toString(36).slice(2);prof={n:nm,r,p:UPH,s:sa,h:await hx(sa+p)};PS();st.nick=nm;save();done()}}
- else{const go1=async()=>{const P=$('#lP');if(await hx(prof.s+P.value)===prof.h)done();else{$('#lM').textContent='❌ Contraseña incorrecta';P.classList.remove('shk');void P.offsetWidth;P.classList.add('shk')}};
-  $('#lG').onclick=go1;$('#lP').onkeydown=e=>e.key==='Enter'&&go1();
-  let c=0;$('#lR').onclick=e=>{if(!c++){e.target.textContent='Esto borra la cuenta y tus datos. Toca otra vez';return}wipe()}}}
-function openU(){$('#uH').textContent='Mi perfil';
- $('#uB').innerHTML=`<div class="r" style="justify-content:flex-start">${pic(prof.p,64)}<div><b>${esc(st.nick)}</b><div class="lb">${esc(prof.r||'')}</div></div></div><button class="sm" id="uP">📷 Cambiar foto</button><button class="sm" id="uX">Cerrar sesión</button>`;
- $('#uP').onclick=()=>$('#uF').click();$('#uX').onclick=()=>{SES(0);gate()};open('#sU2')}
-$('#bU').onclick=openU;
-$('#uF').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
- if(!(OK.test(f.type)||(!f.type&&EXT.test(f.name))))return toast('Solo se permiten fotos');
- try{UPH=(await photo(f,96)).toDataURL('image/jpeg',.7);if(prof){prof.p=UPH;PS();openU()}else toast('✅ Foto lista')}catch{toast('No pude leer esa foto')}};
+/* El perfil y las cuentas se gestionan con el sistema de nube de abajo. */
 
 /* monedas: 50 por minuto en la página */
 setInterval(()=>{if(document.hidden||!isIn())return;st.sec++;tm();if(st.sec%60===0){gain()}if(st.sec%10===0)save()},1000);
@@ -648,6 +620,7 @@ function gate(msg,mode){const o=$('#lkz');o&&o.remove();const reg=(mode||'u')===
 function openU(){if(!acct)return gate();$('#uH').textContent='Mi perfil';
  $('#uB').innerHTML=`<div class="r" style="justify-content:flex-start">${pic(acct.p,64)}<div><b>${esc(acct.n)}</b><div class="lb">${esc(acct.r||'')}</div></div></div><button class="sm" id="uP">📷 Cambiar foto</button><button class="sm" id="uX">Cerrar sesión</button>`;
  $('#uP').onclick=()=>$('#uF').click();$('#uX').onclick=()=>{flush();acct=null;AS();who();close();toast('Sesión cerrada')};open('#sU2')}
+$('#bU').onclick=openU;
 $('#uF').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
  if(!(OK.test(f.type)||(!f.type&&EXT.test(f.name))))return toast('Solo se permiten fotos');
  try{UPH=(await photo(f,96)).toDataURL('image/jpeg',.7);if(acct){acct.p=UPH;AS();flush();openU()}else toast('✅ Foto lista')}catch{toast('No pude leer esa foto')}};
