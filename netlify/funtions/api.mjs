@@ -318,4 +318,149 @@ export default async (req, context) => {
 };
 
 export const config = { path: '/api' };
+
+// ============================================================================
+//  PVP en vivo y tienda de objetos · Netlify Function en /pvp
+//  Va en la MISMA carpeta que tu archivo del API: usa las mismas cuentas y el mismo almacén.
+//  No necesita variables nuevas. Precios = los de la lista TG de index.html.
+// ============================================================================
+import { getStore } from '@netlify/blobs';
+import { createHash, randomBytes } from 'node:crypto';
+
+const IT = {"h1": 250000, "h2": 600000, "h3": 450000, "h4": 800000, "y1": 1500000, "he": 900000, "m1": 70000, "m2": 40000, "m3": 75000, "a1": 400000, "a2": 650000, "a3": 120000, "a4": 700000, "a5": 150000, "a6": 300000, "d1": 100000, "d2": 60000, "d3": 70000, "d4": 90000, "d5": 80000, "o1": 30000, "r1": 25000, "r2": 20000, "t1": 4500, "t2": 6000, "t3": 5000, "t4": 5500};
+const SECS = 120; // duración de cada batalla
+const NAME = /^\w{3,16}$/;
+const sha = (s) => createHash('sha256').update(String(s)).digest('hex');
+const lc = (n) => String(n ?? '').toLowerCase();
+const int = (v, lo, hi) => Math.min(hi, Math.max(lo, Math.floor(+v) || 0));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+class E extends Error { constructor(s, m) { super(m); this.status = s; } }
+const SES = () => new E(401, 'Sesión vencida. Entra de nuevo.');
+const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+const total = (inv) => Object.entries(inv || {}).reduce((s, [k, v]) => s + (Object.hasOwn(IT, k) ? IT[k] * v : 0), 0);
+const MK = (id) => 'pvp/m/' + id, PT = (n) => 'pvp/p/' + n;
+let S;
+
+async function update(key, fn) { // leer → modificar → guardar solo si nadie lo tocó (si no, reintenta)
+  for (let i = 0; i < 8; i++) {
+    const cur = await S.getWithMetadata(key, { type: 'json' });
+    if (!cur) return null;
+    if ((await fn(cur.data)) === false) return cur.data;
+    if ((await S.setJSON(key, cur.data, { onlyIfMatch: cur.etag })).modified) return cur.data;
+    await sleep(20 + Math.random() * 60);
+  }
+  throw new E(503, 'Hay mucho movimiento. Intenta otra vez en un momento.');
+}
+async function acct(b, fn) { // comprueba la sesión (y modifica la cuenta si hay fn)
+  const n = lc(b.n);
+  if (!NAME.test(n)) throw SES();
+  const chk = (u) => { if (typeof b.k !== 'string' || !u.se.includes(sha(b.k))) throw SES(); };
+  const u = fn ? await update('u/' + n, (d) => { chk(d); return fn(d); }) : await S.get('u/' + n, { type: 'json' });
+  if (!u) throw SES();
+  if (!fn) chk(u);
+  return u;
+}
+async function active(n) { // partida en curso de este jugador
+  const p = await S.get(PT(n), { type: 'json' }), m = p && (await S.get(MK(p.m), { type: 'json' }));
+  if (m && Date.now() < m.end + 20000) return m;
+  if (p) await S.delete(PT(n));
+  return null;
+}
+async function view(m, me) {
+  const opp = m.a === me ? m.b : m.a, u = await S.get('u/' + opp, { type: 'json' });
+  return { id: m.id, o: { n: u?.n || opp, p: u?.p || '' }, left: Math.max(1, Math.ceil((m.end - Date.now()) / 1000)) };
+}
+
+const A = {
+  async inv(b) { const u = await acct(b); return { inv: u.inv || {}, cr: u.cr || 0, c: u.c }; },
+
+  async buyi(b) { // comprar objetos de la tienda (q unidades); las monedas las descuenta el servidor
+    const k = String(b.key ?? '').slice(0, 4), q = int(b.q, 1, 99);
+    if (!Object.hasOwn(IT, k)) throw new E(400, 'Ese objeto no existe');
+    const u = await acct(b, (d) => {
+      const t = IT[k] * q;
+      if (d.c < t) throw new E(400, `Te faltan ${t - d.c} monedas`);
+      d.c -= t; d.inv = { ...d.inv, [k]: (d.inv?.[k] || 0) + q };
+    });
+    return { c: u.c, inv: u.inv };
+  },
+
+  async pq(b) { // buscar jugador real: cada 1,5 s la app vuelve a preguntar
+    const u = await acct(b), me = lc(u.n), cur = await active(me);
+    if (cur) return { m: await view(cur, me) };
+    for (let i = 0; i < 6; i++) {
+      const w = await S.getWithMetadata('pvp/wait', { type: 'json' }), now = Date.now(), o = w?.data;
+      if (o?.n && o.n !== me && now - o.t < 6000) { // hay alguien esperando: emparejar
+        if (!(await S.setJSON('pvp/wait', {}, { onlyIfMatch: w.etag })).modified) continue; // solo uno gana el turno
+        if (await active(o.n)) continue;
+        const m = { id: randomBytes(6).toString('hex'), a: o.n, b: me, end: now + SECS * 1000, inv: {}, fin: 0 };
+        await S.setJSON(MK(m.id), m);
+        await S.setJSON(PT(o.n), { m: m.id });
+        await S.setJSON(PT(me), { m: m.id });
+        return { m: await view(m, me) };
+      }
+      const r = await S.setJSON('pvp/wait', { n: me, t: now }, w ? { onlyIfMatch: w.etag } : { onlyIfNew: true });
+      if (r.modified) return { m: null }; // quedé esperando
+    }
+    return { m: null };
+  },
+
+  async pc(b) { // cancelar la búsqueda
+    const u = await acct(b), w = await S.getWithMetadata('pvp/wait', { type: 'json' });
+    if (w?.data?.n === lc(u.n)) await S.setJSON('pvp/wait', {}, { onlyIfMatch: w.etag });
+    return { ok: 1 };
+  },
+
+  async ps(b) { // batalla: guardo lo mío, leo lo del rival; con f:1 cierra y da la corona (una sola vez)
+    const u = await acct(b), me = lc(u.n), id = String(b.m ?? '').replace(/[^a-f0-9]/g, '').slice(0, 12);
+    let pay = false;
+    const m = id && (await update(MK(id), (d) => {
+      if (d.a !== me && d.b !== me) throw new E(403, 'No estás en esa partida');
+      pay = false;
+      const now = Date.now();
+      if (!d.fin && now <= d.end + 1500) { // solo cuenta lo que de verdad tienes
+        const own = u.inv || {}, c = {};
+        for (const [k, v] of Object.entries(b.inv && typeof b.inv === 'object' ? b.inv : {})) {
+          const n = Object.hasOwn(IT, k) ? Math.min(int(v, 0, 99), own[k] || 0) : 0;
+          if (n) c[k] = n;
+        }
+        d.inv[me] = c;
+      }
+      if (b.f && !d.fin && now >= d.end + 2000) {
+        const ta = total(d.inv[d.a]), tb = total(d.inv[d.b]);
+        Object.assign(d, { fin: 1, ta, tb, w: ta > tb ? d.a : tb > ta ? d.b : '' });
+        pay = !!d.w;
+      }
+    }));
+    if (!m) throw new E(404, 'Esa partida no existe');
+    if (pay) await update('u/' + m.w, (d) => { d.cr = (d.cr || 0) + 1; });
+    const opp = m.a === me ? m.b : m.a, out = { o: m.inv[opp] || {} };
+    if (m.fin) {
+      await S.delete(PT(me));
+      const cr = (await S.get('u/' + me, { type: 'json' }))?.cr || 0;
+      Object.assign(out, { r: m.w === me ? 1 : m.w ? -1 : 0, mt: me === m.a ? m.ta : m.tb, ot: me === m.a ? m.tb : m.ta, cr });
+    }
+    return out;
+  },
+};
+
+export default async (req) => {
+  if (req.method !== 'POST') return json({ e: 'Método no permitido' }, 405);
+  try {
+    S = getStore({ name: 'ruleta', consistency: 'strong' });
+    const text = await req.text();
+    if (text.length > 20000) throw new E(413, 'Datos demasiado grandes');
+    let b;
+    try { b = JSON.parse(text); } catch { throw new E(400, 'Solicitud inválida'); }
+    if (!b || typeof b.a !== 'string' || !Object.hasOwn(A, b.a)) throw new E(400, 'Acción desconocida');
+    return json(await A[b.a](b));
+  } catch (e) {
+    if (e instanceof E) return json({ e: e.message }, e.status);
+    console.error('pvp', e);
+    return json({ e: 'Error del servidor' }, 500);
+  }
+};
+
+export const config = { path: '/pvp' };
+           
   
