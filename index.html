@@ -241,7 +241,11 @@ body.ok #rb{opacity:1}
 #nv2 .on{background:none}#nv2 .on img{opacity:1;transform:translateY(-3px) scale(1.06);filter:drop-shadow(0 0 8px #a35bff)}
 .ib{background:none;padding:0;width:100%;max-width:380px}.ib img{width:100%;display:block}
 .cp{display:flex;align-items:center;gap:6px;padding:4px 16px 4px 10px;border-radius:30px;background:#10083a;border:2px solid #8a4bff;box-shadow:0 0 14px #8a4bff77;font-size:20px}
-</style></head><body>
+
+.tg{background:#ffffff14;padding:8px 12px;border-radius:12px;font-size:13px;text-align:center;line-height:1.3;color:#fff}.tg.on{background:#6d4cff}.tg.sl{background:#7a1f35}#ta .tg{flex:1}
+.up{color:#2fe38a}.dn{color:#ff4d6d}#tcv{display:block}
+#nv2 svg{display:block;width:100%;height:56px;opacity:.6;transition:.3s}#nv2 .on svg{opacity:1;transform:translateY(-3px) scale(1.06);filter:drop-shadow(0 0 8px #a35bff)}
+.bp.rd{background:linear-gradient(135deg,#f43f5e,#be123c);color:#fff}</style></head><body>
 
 <div id="ld"><div class="sp"></div><div class="lt">RULETA</div><div class="br"><i id="bar"></i></div><div class="pc"><span id="pc">0</span>%</div></div>
 
@@ -618,7 +622,7 @@ pk=()=>({...st,coins:st.coins+(st.sp||0),items:items.map(i=>({id:i.id,name:i.nam
 need=m=>gate(m||'Para esto necesitas una cuenta (es gratis).');
 async function api(a,o){
  let r,j;
- try{r=await fetch('/api',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({a,...o})})}
+ try{r=await fetch(/^(inv|buyi|pq|pc|ps|tm|tb|ts)$/.test(a)?'/pvp':'/api',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({a,...o})})}
  catch{throw Error('No se pudo conectar con el servidor. Comprueba tu internet e inténtalo de nuevo.')}
  try{j=await r.json()}catch{throw Error('El servidor respondió con un error inesperado. Inténtalo de nuevo más tarde.')}
  if(!r.ok||j?.e)throw Error(j?.e||('Error del servidor ('+r.status+'). Inténtalo de nuevo.'));
@@ -781,7 +785,7 @@ $('#sI .x').onclick=close;
 const E=k=>$('#p_'+PG[k-1]);
 function show(j){const o=pi;if(j===o)return;pi=j;close();
  if(o){const e=E(o);e.classList.remove('on');e.classList.toggle('lf',j>o)}
- if(j){const e=E(j);e.style.transition='none';e.classList.toggle('lf',j<o);void e.offsetWidth;e.style.transition='';e.classList.add('on');e.classList.remove('lf');[0,rT,rP,rC,rF][j]()}
+ if(j){const e=E(j);e.style.transition='none';e.classList.toggle('lf',j<o);void e.offsetWidth;e.style.transition='';e.classList.add('on');e.classList.remove('lf');[0,rT,rP,rC,rF,rTr][j]()}
  document.querySelectorAll('#nv2 button').forEach((b,i)=>b.classList.toggle('on',i===j))}
 $('#nv2').onclick=e=>{const b=e.target.closest('button');b&&show(+b.dataset.i)};
 /* --- Tienda --- */
@@ -795,8 +799,9 @@ function upT(){$('#zc').innerHTML=CI+' '+fmt(st.coins);
  document.querySelectorAll('#p_tienda .pi').forEach(c=>{const k=c.dataset.k,n=qt[k]||1;c.querySelector('.q').textContent=n;
   c.querySelector('.hv').innerHTML=CI+' '+fmt(CAT[k].p)+' c/u · Tienes '+(st.inv[k]||0);
   c.querySelector('.bp').innerHTML=CI+' '+fmt(CAT[k].p*n)+' · Comprar'})}
-function buy(k){const n=qt[k]||1,x=CAT[k],t=x.p*n;if(st.coins<t)return toast('Te faltan '+fmt(t-st.coins)+' monedas');
- st.coins-=t;if(acct)st.sp+=t;st.inv[k]=(st.inv[k]||0)+n;qt[k]=1;coins();upT();toast('¡Comprado! '+n+' × '+x.n)}
+async function buy(k){const n=qt[k]||1,x=CAT[k],t=x.p*n;if(st.coins<t)return toast('Te faltan '+fmt(t-st.coins)+' monedas');
+ try{if(acct){const r=await api('buyi',{n:acct.n,k:acct.k,key:k,q:n});st.coins=r.c;st.inv=r.inv}else{st.coins-=t;st.inv[k]=(st.inv[k]||0)+n}
+  qt[k]=1;coins();upT();toast('¡Comprado! '+n+' × '+x.n)}catch(e){lost(e);toast(e.message)}}
 /* --- Mis cosas --- */
 function rC(){const l=Object.keys(st.inv).filter(k=>CAT[k]&&st.inv[k]>0);
  $('#p_cosas').innerHTML=`<h3>Mis cosas <span class="sm">${money(val(st.inv))}</span></h3>`+(l.length?`<div class="gg">${l.map(k=>`<div class="pi"><img src="${PIMG[CAT[k].i]}" alt=""><b>${CAT[k].n}</b><span class="hv">Cantidad: <b style="color:#fff">${st.inv[k]}</b></span><small>${money(CAT[k].p*st.inv[k])}</small></div>`).join('')}</div>`:'<div class="lb" style="text-align:center;margin-top:48px">Aún no compraste nada.<br>Entra a la Tienda y elige lo que quieras.</div>')}
@@ -832,8 +837,10 @@ function iL(){const l=Object.keys(st.inv).filter(k=>CAT[k]&&st.inv[k]>0);
  $('#iL').innerHTML=l.length?l.map(k=>{const u=st.inv[k]-(M.mine[k]||0);return`<button class="pi" data-k="${k}"${u?'':' disabled'} style="text-align:left"><img src="${PIMG[CAT[k].i]}" alt=""><b>${CAT[k].n}</b><small>${money(CAT[k].p)} · te quedan ${u}</small></button>`}).join(''):'<div class="lb">Aún no tienes nada. Compra algo en la Tienda.</div>'}
 $('#iL').onclick=e=>{const b=e.target.closest('button');if(!b||!M||M.done)return;const k=b.dataset.k;if((M.mine[k]||0)>=(st.inv[k]||0))return;M.mine[k]=(M.mine[k]||0)+1;ub();poll();iL()}
 async function fin(){if(M.done)return;M.done=true;clearInterval(M.t);
- if(!M.bot)try{const r=await api('ps',{n:acct.n,k:acct.k,m:M.id,inv:M.mine,f:1});if(r&&r.o)M.th=cl(r.o)}catch{}
- const a=val(M.mine),b=val(M.th),w=a>b?1:a<b?-1:0;if(w>0&&!M.bot){st.cr++;save()}close();
+ let R=null;const zz=ms=>new Promise(r=>setTimeout(r,ms));
+ if(!M.bot){const t=$('#zt');t&&(t.textContent='Calculando resultado…');await zz(2300);
+  for(let i=0;i<6&&!R;i++){try{const r=await api('ps',{n:acct.n,k:acct.k,m:M.id,inv:M.mine,f:1});if(r&&r.o)M.th=cl(r.o);if(r&&r.r!==undefined)R=r;else await zz(1200)}catch{await zz(1200)}}}
+ let a=val(M.mine),b=val(M.th),w=a>b?1:a<b?-1:0;if(R){a=R.mt;b=R.ot;w=R.r;st.cr=R.cr;save()}close();
  const top=Object.keys(w<0?M.th:M.mine).filter(k=>CAT[k]).sort((x,y)=>CAT[y].p-CAT[x].p).slice(0,5);
  V='r';pv(`<div class="pv2"><div style="font-size:72px;${w<0?'filter:grayscale(1)':''}">👑</div><h3 style="display:block;font-size:34px;color:${w>0?'#ffd23f':'#fff'}">${['¡Perdiste!','¡Empate!','¡GANASTE!'][w+1]}</h3><div class="lb" style="font-size:16px">${['Tu oponente tiene más dinero.','Tienen el mismo dinero.','Tienes más dinero que tu oponente.'][w+1]}${M.bot?'<br>(Práctica: no suma coronas)':''}</div><div class="vs">${pl('Tú',mp(),a)}<b style="font-size:30px">${w>0?'›':w<0?'‹':'='}</b>${pl(M.o.n,M.o.p,b)}</div><div class="pi" style="width:100%"><b>${w<0?'Sus':'Tus'} compras destacadas</b><div class="r" style="justify-content:center">${top.map(k=>`<img src="${PIMG[CAT[k].i]}" style="width:56px;height:56px;border-radius:12px;object-fit:cover" alt="">`).join('')||'<span class="lb">Sin compras</span>'}</div></div><button class="big" id="zh">🏠 Volver al inicio</button></div>`);
  $('#zh').onclick=()=>{M=null;hm();show(0)}}
@@ -843,7 +850,7 @@ const CR=z=>`<img src="${NEO.cr}" height="${z}" style="vertical-align:middle" al
 function snap(){try{localStorage.setItem('ruleta_snap_'+acct.n,JSON.stringify(st))}catch{}}
 function restore(){try{const k='ruleta_snap_'+acct.n,s=localStorage.getItem(k);if(s){Object.assign(st,JSON.parse(s));localStorage.removeItem(k)}}catch{}}
 function wipe(){Object.keys(st).forEach(k=>delete st[k]);Object.assign(st,{coins:0,own:{},rs:0,bg:0,dc:'',ph:'',an:'',inv:{},cr:0,sp:0,keep:false,nick:''});PH=null;UPH='';$('#kp').value=0;apply();coins();list();draw();afterAuth()}
-function afterAuth(){const f=[0,rT,rP,rC,rF][pi];f&&f()}
+function afterAuth(){const f=[0,rT,rP,rC,rF,rTr][pi];f&&f()}
 $('#nv2').innerHTML=NEO.nav.map((s,i)=>`<button data-i="${i}"${i?'':' class="on"'}><img src="${s}" alt=""></button>`).join('');
 const NP=['#ff3d5a','#ffc414','#16c5ff','#8f2cff'],_sc=segColor;segColor=(i,n)=>st.rs===0?(n%4===1&&i===n-1?'#ff8a2a':NP[i%4]):_sc(i,n);
 const _dr=draw;draw=function(){_dr();if(st.rs!==0||!items.length)return;const d=dpr(),S=wh.width/d,c=S/2,R=c-5,x=wh.getContext('2d');
@@ -866,11 +873,55 @@ async function findM(mode){if(!acct)return need('Para jugar PVP necesitas una cu
   if(Date.now()-id>30000)return nf();
   setTimeout(L,1500)};L()}
 async function fin(){if(M.done)return;M.done=true;clearInterval(M.t);
- if(!M.bot)try{const r=await api('ps',{n:acct.n,k:acct.k,m:M.id,inv:M.mine,f:1});if(r&&r.o)M.th=cl(r.o)}catch{}
- const a=val(M.mine),b=val(M.th),w=a>b?1:a<b?-1:0;if(w>0&&!M.bot){st.cr++;save()}close();
+ let R=null;const zz=ms=>new Promise(r=>setTimeout(r,ms));
+ if(!M.bot){const t=$('#zt');t&&(t.textContent='Calculando resultado…');await zz(2300);
+  for(let i=0;i<6&&!R;i++){try{const r=await api('ps',{n:acct.n,k:acct.k,m:M.id,inv:M.mine,f:1});if(r&&r.o)M.th=cl(r.o);if(r&&r.r!==undefined)R=r;else await zz(1200)}catch{await zz(1200)}}}
+ let a=val(M.mine),b=val(M.th),w=a>b?1:a<b?-1:0;if(R){a=R.mt;b=R.ot;w=R.r;st.cr=R.cr;save()}close();
  const top=Object.keys(w<0?M.th:M.mine).filter(k=>CAT[k]).sort((x,y)=>CAT[y].p-CAT[x].p).slice(0,5);
  V='r';pv(`<div class="pv2"><img src="${w<0?NEO.cb:NEO.cr}" style="height:130px${w?'':';filter:grayscale(.7)'}" alt=""><h3 style="display:block;font-size:34px;color:${w>0?'#ffd23f':'#fff'}">${['¡Perdiste!','¡Empate!','¡GANASTE!'][w+1]}</h3><div class="lb" style="font-size:16px">${['Tu oponente tiene más dinero.','Tienen el mismo dinero.','Tienes más dinero que tu oponente.'][w+1]}${M.bot?'<br>(Contra bots no suma coronas)':''}</div><div class="vs">${pl('Tú',mp(),a)}<b style="font-size:30px">${w>0?'›':w<0?'‹':'='}</b>${pl(M.o.n,M.o.p,b)}</div><div class="pi" style="width:100%"><b>${w<0?'Sus':'Tus'} compras destacadas</b><div class="r" style="justify-content:center">${top.map(k=>`<img src="${PIMG[CAT[k].i]}" style="width:56px;height:56px;border-radius:12px;object-fit:cover" alt="">`).join('')||'<span class="lb">Sin compras</span>'}</div></div><button class="big" id="zh">Volver al inicio</button></div>`);
  $('#zh').onclick=()=>{M=null;hm();show(0)}}
+
+/* ===== v6: tienda y PVP con el servidor (/pvp) ===== */
+st.sp=0;
+function refresh(){const f=[0,rT,rP,rC,rF,rTr][pi];f&&f()}
+function afterAuth(){refresh();loadInv()}
+async function loadInv(){if(!acct)return;const a=acct;try{const r=await api('inv',{n:a.n,k:a.k});if(acct!==a)return;st.inv=r.inv||{};st.cr=r.cr||0;save();refresh()}catch{}}
+
+/* ===== v7: trading ===== */
+let TM=null,tid='neo',trg='15',ttm=0;
+PG.push('trading');document.body.insertAdjacentHTML('beforeend','<div class="pg" id="p_trading"></div>');
+$('#nv2').insertAdjacentHTML('beforeend','<button data-i="5"><svg viewBox="0 0 120 100"><defs><linearGradient id="tgd" x1="0" x2="1"><stop offset="0" stop-color="#a35bff"/><stop offset="1" stop-color="#2f8bff"/></linearGradient></defs><rect x="6" y="6" width="108" height="88" rx="22" fill="#0b0630" stroke="url(#tgd)" stroke-width="4"/><path d="M32 40v28M52 30v30M72 24v26M92 18v22" stroke="#39e08a" stroke-width="2.5"/><rect x="27" y="48" width="10" height="14" rx="2" fill="#39e08a"/><rect x="47" y="38" width="10" height="16" rx="2" fill="#ff4d6d"/><rect x="67" y="30" width="10" height="14" rx="2" fill="#39e08a"/><rect x="87" y="22" width="10" height="12" rx="2" fill="#39e08a"/><text x="60" y="84" font-size="14" font-weight="800" fill="#fff" text-anchor="middle">TRADING</text></svg></button>');
+const NR={5:30,15:90,60:360},fx2=v=>Math.floor(v).toLocaleString('en-US');
+function rTr(){const p=$('#p_trading');
+ if(!p.dataset.r){p.dataset.r=1;
+  p.innerHTML=`<h3>Trading <span class="sm" id="tc"></span></h3><div class="r" id="ta" style="gap:6px;margin-bottom:8px"></div><div class="r" style="align-items:baseline;gap:10px"><b id="tp" style="font-size:30px"></b><b id="td"></b></div><canvas id="tcv" style="width:100%;height:230px;border-radius:14px;background:#ffffff0a"></canvas><div id="tmsg" class="lb" style="text-align:center;padding:8px 0"></div><div class="r" id="tr" style="justify-content:center;gap:6px;margin:8px 0"></div><div class="pi" id="tq"></div><div class="pi" style="margin-top:10px"><b>Comprar</b><div class="r" style="gap:6px">${chips('tin')}</div><input class="in" id="tin" type="number" inputmode="numeric" placeholder="Monedas a invertir"><button class="bp" id="tby">Comprar</button></div><div class="pi" style="margin-top:10px"><b>Vender</b><div class="r" style="gap:6px">${chips('tsn')}</div><input class="in" id="tsn" type="number" inputmode="numeric" placeholder="Monedas a vender"><button class="bp rd" id="tsl">Vender</button></div><small class="hv" style="display:block;margin-top:10px">Precios simulados, iguales para todos. Comisión 0.5% por operación. Puedes ganar o perder monedas.</small>`;
+  p.onclick=async e=>{const b=e.target.closest('button');if(!b)return;
+   if(b.dataset.a){tid=b.dataset.a;return trL()}if(b.dataset.r){trg=b.dataset.r;return trU()}
+   if(b.dataset.v){$('#'+b.dataset.i).value=b.dataset.v==='m'?(b.dataset.i==='tin'?Math.floor(st.coins):trMax()):b.dataset.v;return}
+   const by=b.id==='tby';if(!by&&b.id!=='tsl')return;if(!acct)return need('Para hacer trading necesitas una cuenta (es gratis).');
+   try{const r=by?await api('tb',{n:acct.n,k:acct.k,id:tid,amt:+$('#tin').value}):await api('ts',{n:acct.n,k:acct.k,id:tid,amt:+$('#tsn').value});st.coins=r.c;coins();toast(by?'Compraste a '+r.p.toFixed(2):'Vendiste a '+r.p.toFixed(2)+' · recibes '+r.got+' monedas');$(by?'#tin':'#tsn').value='';trL()}catch(er){lost(er);toast(er.message)}}}
+ trK();trL();if(!ttm)ttm=setInterval(()=>pi===5?trL():(clearInterval(ttm),ttm=0),5000)}
+async function trL(){try{TM=await api('tm',{id:tid,n:acct&&acct.n,k:acct&&acct.k});$('#tmsg').textContent='';trU()}catch(e){if(!TM){trK();$('#tmsg').innerHTML='No se pudo cargar el mercado.<br>Revisa tu conexión y que el servidor esté publicado.<br><button class="tg" data-a="'+tid+'" style="margin-top:8px">Reintentar</button>'}}}
+function trU(){if(!TM||!$('#tp'))return;const A=TM.a,cu=A.find(a=>a.id===tid),P=TM.h.slice(-NR[trg]),ch=(P[P.length-1]/P[0]-1)*100;
+ $('#tc').innerHTML=CI+' '+fx2(st.coins);
+ $('#ta').innerHTML=A.map(a=>`<button class="tg${a.id===tid?' on':''}" data-a="${a.id}">${a.n}<br><b class="${a.p>=a.f?'up':'dn'}">${a.p.toFixed(1)}</b></button>`).join('');
+ $('#tp').textContent=cu.p.toFixed(2);$('#td').className=ch>=0?'up':'dn';$('#td').textContent=(ch>=0?'▲ +':'▼ ')+ch.toFixed(2)+'%';
+ $('#tr').innerHTML=[['5','5 min'],['15','15 min'],['60','1 h']].map(r=>`<button class="tg${r[0]===trg?' on':''}" data-r="${r[0]}">${r[1]}</button>`).join('');
+ const ps=TM.pos[tid],u=ps?ps.u:0,v=u*cu.p,pl=v-(ps?ps.cost:0);
+ $('#tq').innerHTML=acct?`<b>Tu posición en ${cu.n}</b>`+(u>0?`<div>${u.toFixed(4)} unidades ≈ ${fx2(v)} monedas</div><div>Invertido: ${fx2(ps.cost)} · <b class="${pl>=0?'up':'dn'}">${pl>=0?'+':''}${fx2(pl)} (${(pl/ps.cost*100).toFixed(1)}%)</b></div>`:'<div class="lb">Aún no tienes. Compra para empezar.</div>'):'<div class="lb">Entra con tu cuenta para comprar y vender.</div>';
+ trC()}
+function trC(){const cv=$('#tcv');if(!cv||!TM)return;const d=devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(!w)return;cv.width=w*d;cv.height=h*d;const x=cv.getContext('2d');x.scale(d,d);
+ const P=TM.h.slice(-NR[trg]),b=Math.ceil(P.length/30),C=[];let pv=P[0];
+ for(let i=0;i<P.length;i+=b){const s=P.slice(i,i+b),c=s[s.length-1];C.push({o:pv,c,hi:Math.max(pv,...s),lo:Math.min(pv,...s)});pv=c}
+ const mx=Math.max(...C.map(k=>k.hi)),mn=Math.min(...C.map(k=>k.lo)),pd=(mx-mn||1)*.12,hi=mx+pd,lo=mn-pd,W=w-52,y=v=>h-14-(v-lo)/(hi-lo)*(h-28);
+ x.font='11px system-ui';x.fillStyle='#9aa4d6';x.strokeStyle='#ffffff14';x.lineWidth=1;
+ for(let i=0;i<=3;i++){const v=lo+(hi-lo)*i/3,yy=y(v);x.beginPath();x.moveTo(0,yy);x.lineTo(W,yy);x.stroke();x.fillText(v.toFixed(1),W+6,yy+4)}
+ const cw=W/C.length;C.forEach((k,i)=>{const col=k.c>=k.o?'#2fe38a':'#ff4d6d',cx=i*cw+cw/2;x.strokeStyle=x.fillStyle=col;x.lineWidth=1.5;x.beginPath();x.moveTo(cx,y(k.hi));x.lineTo(cx,y(k.lo));x.stroke();x.fillRect(cx-cw*.32,Math.min(y(k.o),y(k.c)),cw*.64,Math.max(2,Math.abs(y(k.o)-y(k.c))))});
+ const l=P[P.length-1],yl=y(l);x.setLineDash([4,4]);x.strokeStyle='#ffd23f';x.beginPath();x.moveTo(0,yl);x.lineTo(W,yl);x.stroke();x.setLineDash([]);x.fillStyle='#ffd23f';x.fillRect(W+1,yl-9,50,18);x.fillStyle='#1a1200';x.font='bold 11px system-ui';x.fillText(l.toFixed(1),W+6,yl+4)}
+
+const AL=[['oro','Oro'],['rlt','Ruleta'],['neo','Neón']],chips=i=>[100,500,1000,5000].map(v=>`<button class="tg" data-v="${v}" data-i="${i}">${v}</button>`).join('')+`<button class="tg" data-v="m" data-i="${i}">Máx</button>`;
+const trMax=()=>{const ps=TM&&TM.pos[tid],cu=TM&&TM.a.find(a=>a.id===tid);return ps&&cu?Math.floor(ps.u*cu.p*.995):0};
+function trK(){if(!$('#tc'))return;$('#tc').innerHTML=CI+' '+fx2(st.coins);if(!TM){$('#ta').innerHTML=AL.map(a=>`<button class="tg${a[0]===tid?' on':''}" data-a="${a[0]}">${a[1]}</button>`).join('');$('#tr').innerHTML=[['5','5 min'],['15','15 min'],['60','1 h']].map(r=>`<button class="tg${r[0]===trg?' on':''}" data-r="${r[0]}">${r[1]}</button>`).join('')}}
 
 /* ===== RADIO / MÚSICA ===== */
 (()=>{
